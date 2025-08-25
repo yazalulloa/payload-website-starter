@@ -24,6 +24,7 @@
   },
   "dependencies": {
     "@payloadcms/admin-bar": "3.53.0",
+    "@payloadcms/db-sqlite": "^3.53.0",
     "@payloadcms/db-vercel-postgres": "3.53.0",
     "@payloadcms/live-preview-react": "3.53.0",
     "@payloadcms/next": "3.53.0",
@@ -88,9 +89,11 @@
   },
   "pnpm": {
     "onlyBuiltDependencies": [
-      "sharp",
+      "bufferutil",
       "esbuild",
-      "unrs-resolver"
+      "sharp",
+      "unrs-resolver",
+      "utf-8-validate"
     ]
   }
 }
