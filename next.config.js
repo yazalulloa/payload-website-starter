@@ -20,6 +20,7 @@ const nextConfig = {
       }),
     ],
   },
+  turbopack: {},
   webpack: (webpackConfig) => {
     webpackConfig.resolve.extensionAlias = {
       '.cjs': ['.cts', '.cjs'],
