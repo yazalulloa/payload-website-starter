@@ -14,6 +14,9 @@ import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 
 import { Page, Post } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
+import { betterAuthPlugin } from 'payload-auth'
+import { nextCookies } from 'better-auth/next-js'
+import { admin, multiSession } from 'better-auth/plugins'
 
 const generateTitle: GenerateTitle<Post | Page> = ({ doc }) => {
   return doc?.title ? `${doc.title} | Payload Website Template` : 'Payload Website Template'
@@ -99,5 +102,66 @@ export const plugins: Plugin[] = [
       media: true,
     },
     token: process.env.BLOB_READ_WRITE_TOKEN || '',
+  }),
+
+  betterAuthPlugin({
+    disabled: false,
+    disableDefaultPayloadAuth: true,
+    hidePluginCollections: true,
+    users: {
+      allowedFields: ['name'],
+      defaultRole: 'user',
+      defaultAdminRole: 'admin',
+    },
+    accounts: {
+      slug: 'userAccounts',
+    },
+    sessions: {
+      slug: 'userSessions',
+    },
+    verifications: {
+      slug: 'verifications',
+    },
+    betterAuthOptions: {
+      appName: 'marketplace',
+      baseURL: process.env.NEXT_PUBLIC_SERVER_URL,
+      trustedOrigins: [process.env.NEXT_PUBLIC_SERVER_URL!],
+      // emailAndPassword: {
+      //   enabled: true,
+      // },
+      secret: process.env.BETTER_AUTH_SECRET,
+      socialProviders: {
+        github: {
+          clientId: process.env.GITHUB_CLIENT_ID as string,
+          clientSecret: process.env.GITHUB_CLIENT_SECRET as string,
+        },
+        google: {
+          clientId: process.env.GOOGLE_CLIENT_ID as string,
+          clientSecret: process.env.GOOGLE_CLIENT_SECRET as string,
+        },
+      },
+      user: {
+        additionalFields: {
+          role: {
+            type: 'string',
+            defaultValue: 'user',
+            input: false,
+          },
+        },
+      },
+      session: {
+        cookieCache: {
+          enabled: true,
+          maxAge: 5 * 60, // Cache duration in seconds
+        },
+      },
+      account: {
+        accountLinking: {
+          enabled: true,
+          // trustedProviders: ['google'],
+        },
+      },
+      plugins: [admin(), multiSession(), nextCookies()],
+    },
   }),
 ]

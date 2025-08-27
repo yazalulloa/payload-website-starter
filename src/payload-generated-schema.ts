@@ -19,6 +19,161 @@ import {
 } from '@payloadcms/db-sqlite/drizzle/sqlite-core'
 import { sql, relations } from '@payloadcms/db-sqlite/drizzle'
 
+export const users = sqliteTable(
+  'users',
+  {
+    id: integer('id').primaryKey(),
+    name: text('name').notNull(),
+    email: text('email').notNull(),
+    emailVerified: integer('email_verified', { mode: 'boolean' }).notNull(),
+    image: text('image'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    role: text('role', { enum: ['admin', 'user'] }).default('user'),
+    banned: integer('banned', { mode: 'boolean' }).default(false),
+    banReason: text('ban_reason'),
+    banExpires: text('ban_expires').default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (columns) => ({
+    users_email_idx: uniqueIndex('users_email_idx').on(columns.email),
+    users_created_at_idx: index('users_created_at_idx').on(columns.createdAt),
+    users_updated_at_idx: index('users_updated_at_idx').on(columns.updatedAt),
+  }),
+)
+
+export const user_sessions = sqliteTable(
+  'user_sessions',
+  {
+    id: integer('id').primaryKey(),
+    expiresAt: text('expires_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    token: text('token').notNull(),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    ipAddress: text('ip_address'),
+    userAgent: text('user_agent'),
+    user: integer('user_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'set null',
+      }),
+    impersonatedBy: integer('impersonated_by_id').references(() => users.id, {
+      onDelete: 'set null',
+    }),
+  },
+  (columns) => ({
+    user_sessions_token_idx: uniqueIndex('user_sessions_token_idx').on(columns.token),
+    user_sessions_created_at_idx: index('user_sessions_created_at_idx').on(columns.createdAt),
+    user_sessions_updated_at_idx: index('user_sessions_updated_at_idx').on(columns.updatedAt),
+    user_sessions_user_idx: index('user_sessions_user_idx').on(columns.user),
+    user_sessions_impersonated_by_idx: index('user_sessions_impersonated_by_idx').on(
+      columns.impersonatedBy,
+    ),
+  }),
+)
+
+export const user_accounts = sqliteTable(
+  'user_accounts',
+  {
+    id: integer('id').primaryKey(),
+    accountId: text('account_id').notNull(),
+    providerId: text('provider_id').notNull(),
+    user: integer('user_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'set null',
+      }),
+    accessToken: text('access_token'),
+    refreshToken: text('refresh_token'),
+    idToken: text('id_token'),
+    accessTokenExpiresAt: text('access_token_expires_at').default(
+      sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+    ),
+    refreshTokenExpiresAt: text('refresh_token_expires_at').default(
+      sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
+    ),
+    scope: text('scope'),
+    password: text('password'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (columns) => ({
+    user_accounts_account_id_idx: index('user_accounts_account_id_idx').on(columns.accountId),
+    user_accounts_user_idx: index('user_accounts_user_idx').on(columns.user),
+    user_accounts_access_token_expires_at_idx: index(
+      'user_accounts_access_token_expires_at_idx',
+    ).on(columns.accessTokenExpiresAt),
+    user_accounts_refresh_token_expires_at_idx: index(
+      'user_accounts_refresh_token_expires_at_idx',
+    ).on(columns.refreshTokenExpiresAt),
+    user_accounts_created_at_idx: index('user_accounts_created_at_idx').on(columns.createdAt),
+    user_accounts_updated_at_idx: index('user_accounts_updated_at_idx').on(columns.updatedAt),
+  }),
+)
+
+export const verifications = sqliteTable(
+  'verifications',
+  {
+    id: integer('id').primaryKey(),
+    identifier: text('identifier').notNull(),
+    value: text('value').notNull(),
+    expiresAt: text('expires_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (columns) => ({
+    verifications_identifier_idx: index('verifications_identifier_idx').on(columns.identifier),
+    verifications_expires_at_idx: index('verifications_expires_at_idx').on(columns.expiresAt),
+    verifications_created_at_idx: index('verifications_created_at_idx').on(columns.createdAt),
+    verifications_updated_at_idx: index('verifications_updated_at_idx').on(columns.updatedAt),
+  }),
+)
+
+export const admin_invitations = sqliteTable(
+  'admin_invitations',
+  {
+    id: integer('id').primaryKey(),
+    role: text('role', { enum: ['admin', 'user'] })
+      .notNull()
+      .default('admin'),
+    token: text('token').notNull(),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (columns) => ({
+    admin_invitations_token_idx: index('admin_invitations_token_idx').on(columns.token),
+    admin_invitations_updated_at_idx: index('admin_invitations_updated_at_idx').on(
+      columns.updatedAt,
+    ),
+    admin_invitations_created_at_idx: index('admin_invitations_created_at_idx').on(
+      columns.createdAt,
+    ),
+  }),
+)
+
 export const pages_hero_links = sqliteTable(
   'pages_hero_links',
   {
@@ -971,56 +1126,6 @@ export const categories = sqliteTable(
   }),
 )
 
-export const users_sessions = sqliteTable(
-  'users_sessions',
-  {
-    _order: integer('_order').notNull(),
-    _parentID: integer('_parent_id').notNull(),
-    id: text('id').primaryKey(),
-    createdAt: text('created_at').default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-    expiresAt: text('expires_at')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-  },
-  (columns) => ({
-    _orderIdx: index('users_sessions_order_idx').on(columns._order),
-    _parentIDIdx: index('users_sessions_parent_id_idx').on(columns._parentID),
-    _parentIDFk: foreignKey({
-      columns: [columns['_parentID']],
-      foreignColumns: [users.id],
-      name: 'users_sessions_parent_id_fk',
-    }).onDelete('cascade'),
-  }),
-)
-
-export const users = sqliteTable(
-  'users',
-  {
-    id: integer('id').primaryKey(),
-    name: text('name'),
-    updatedAt: text('updated_at')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-    createdAt: text('created_at')
-      .notNull()
-      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-    email: text('email').notNull(),
-    resetPasswordToken: text('reset_password_token'),
-    resetPasswordExpiration: text('reset_password_expiration').default(
-      sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`,
-    ),
-    salt: text('salt'),
-    hash: text('hash'),
-    loginAttempts: numeric('login_attempts').default('0'),
-    lockUntil: text('lock_until').default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
-  },
-  (columns) => ({
-    users_updated_at_idx: index('users_updated_at_idx').on(columns.updatedAt),
-    users_created_at_idx: index('users_created_at_idx').on(columns.createdAt),
-    users_email_idx: uniqueIndex('users_email_idx').on(columns.email),
-  }),
-)
-
 export const redirects = sqliteTable(
   'redirects',
   {
@@ -1586,11 +1691,15 @@ export const payload_locked_documents_rels = sqliteTable(
     order: integer('order'),
     parent: integer('parent_id').notNull(),
     path: text('path').notNull(),
+    usersID: integer('users_id'),
+    userSessionsID: integer('user_sessions_id'),
+    userAccountsID: integer('user_accounts_id'),
+    verificationsID: integer('verifications_id'),
+    'admin-invitationsID': integer('admin_invitations_id'),
     pagesID: integer('pages_id'),
     postsID: integer('posts_id'),
     mediaID: integer('media_id'),
     categoriesID: integer('categories_id'),
-    usersID: integer('users_id'),
     redirectsID: integer('redirects_id'),
     formsID: integer('forms_id'),
     'form-submissionsID': integer('form_submissions_id'),
@@ -1601,6 +1710,21 @@ export const payload_locked_documents_rels = sqliteTable(
     order: index('payload_locked_documents_rels_order_idx').on(columns.order),
     parentIdx: index('payload_locked_documents_rels_parent_idx').on(columns.parent),
     pathIdx: index('payload_locked_documents_rels_path_idx').on(columns.path),
+    payload_locked_documents_rels_users_id_idx: index(
+      'payload_locked_documents_rels_users_id_idx',
+    ).on(columns.usersID),
+    payload_locked_documents_rels_user_sessions_id_idx: index(
+      'payload_locked_documents_rels_user_sessions_id_idx',
+    ).on(columns.userSessionsID),
+    payload_locked_documents_rels_user_accounts_id_idx: index(
+      'payload_locked_documents_rels_user_accounts_id_idx',
+    ).on(columns.userAccountsID),
+    payload_locked_documents_rels_verifications_id_idx: index(
+      'payload_locked_documents_rels_verifications_id_idx',
+    ).on(columns.verificationsID),
+    payload_locked_documents_rels_admin_invitations_id_idx: index(
+      'payload_locked_documents_rels_admin_invitations_id_idx',
+    ).on(columns['admin-invitationsID']),
     payload_locked_documents_rels_pages_id_idx: index(
       'payload_locked_documents_rels_pages_id_idx',
     ).on(columns.pagesID),
@@ -1613,9 +1737,6 @@ export const payload_locked_documents_rels = sqliteTable(
     payload_locked_documents_rels_categories_id_idx: index(
       'payload_locked_documents_rels_categories_id_idx',
     ).on(columns.categoriesID),
-    payload_locked_documents_rels_users_id_idx: index(
-      'payload_locked_documents_rels_users_id_idx',
-    ).on(columns.usersID),
     payload_locked_documents_rels_redirects_id_idx: index(
       'payload_locked_documents_rels_redirects_id_idx',
     ).on(columns.redirectsID),
@@ -1636,6 +1757,31 @@ export const payload_locked_documents_rels = sqliteTable(
       foreignColumns: [payload_locked_documents.id],
       name: 'payload_locked_documents_rels_parent_fk',
     }).onDelete('cascade'),
+    usersIdFk: foreignKey({
+      columns: [columns['usersID']],
+      foreignColumns: [users.id],
+      name: 'payload_locked_documents_rels_users_fk',
+    }).onDelete('cascade'),
+    userSessionsIdFk: foreignKey({
+      columns: [columns['userSessionsID']],
+      foreignColumns: [user_sessions.id],
+      name: 'payload_locked_documents_rels_user_sessions_fk',
+    }).onDelete('cascade'),
+    userAccountsIdFk: foreignKey({
+      columns: [columns['userAccountsID']],
+      foreignColumns: [user_accounts.id],
+      name: 'payload_locked_documents_rels_user_accounts_fk',
+    }).onDelete('cascade'),
+    verificationsIdFk: foreignKey({
+      columns: [columns['verificationsID']],
+      foreignColumns: [verifications.id],
+      name: 'payload_locked_documents_rels_verifications_fk',
+    }).onDelete('cascade'),
+    'admin-invitationsIdFk': foreignKey({
+      columns: [columns['admin-invitationsID']],
+      foreignColumns: [admin_invitations.id],
+      name: 'payload_locked_documents_rels_admin_invitations_fk',
+    }).onDelete('cascade'),
     pagesIdFk: foreignKey({
       columns: [columns['pagesID']],
       foreignColumns: [pages.id],
@@ -1655,11 +1801,6 @@ export const payload_locked_documents_rels = sqliteTable(
       columns: [columns['categoriesID']],
       foreignColumns: [categories.id],
       name: 'payload_locked_documents_rels_categories_fk',
-    }).onDelete('cascade'),
-    usersIdFk: foreignKey({
-      columns: [columns['usersID']],
-      foreignColumns: [users.id],
-      name: 'payload_locked_documents_rels_users_fk',
     }).onDelete('cascade'),
     redirectsIdFk: foreignKey({
       columns: [columns['redirectsID']],
@@ -1889,6 +2030,28 @@ export const footer_rels = sqliteTable(
   }),
 )
 
+export const relations_users = relations(users, () => ({}))
+export const relations_user_sessions = relations(user_sessions, ({ one }) => ({
+  user: one(users, {
+    fields: [user_sessions.user],
+    references: [users.id],
+    relationName: 'user',
+  }),
+  impersonatedBy: one(users, {
+    fields: [user_sessions.impersonatedBy],
+    references: [users.id],
+    relationName: 'impersonatedBy',
+  }),
+}))
+export const relations_user_accounts = relations(user_accounts, ({ one }) => ({
+  user: one(users, {
+    fields: [user_accounts.user],
+    references: [users.id],
+    relationName: 'user',
+  }),
+}))
+export const relations_verifications = relations(verifications, () => ({}))
+export const relations_admin_invitations = relations(admin_invitations, () => ({}))
 export const relations_pages_hero_links = relations(pages_hero_links, ({ one }) => ({
   _parentID: one(pages, {
     fields: [pages_hero_links._parentID],
@@ -2297,18 +2460,6 @@ export const relations_categories = relations(categories, ({ one, many }) => ({
     relationName: 'breadcrumbs',
   }),
 }))
-export const relations_users_sessions = relations(users_sessions, ({ one }) => ({
-  _parentID: one(users, {
-    fields: [users_sessions._parentID],
-    references: [users.id],
-    relationName: 'sessions',
-  }),
-}))
-export const relations_users = relations(users, ({ many }) => ({
-  sessions: many(users_sessions, {
-    relationName: 'sessions',
-  }),
-}))
 export const relations_redirects_rels = relations(redirects_rels, ({ one }) => ({
   parent: one(redirects, {
     fields: [redirects_rels.parent],
@@ -2518,6 +2669,31 @@ export const relations_payload_locked_documents_rels = relations(
       references: [payload_locked_documents.id],
       relationName: '_rels',
     }),
+    usersID: one(users, {
+      fields: [payload_locked_documents_rels.usersID],
+      references: [users.id],
+      relationName: 'users',
+    }),
+    userSessionsID: one(user_sessions, {
+      fields: [payload_locked_documents_rels.userSessionsID],
+      references: [user_sessions.id],
+      relationName: 'userSessions',
+    }),
+    userAccountsID: one(user_accounts, {
+      fields: [payload_locked_documents_rels.userAccountsID],
+      references: [user_accounts.id],
+      relationName: 'userAccounts',
+    }),
+    verificationsID: one(verifications, {
+      fields: [payload_locked_documents_rels.verificationsID],
+      references: [verifications.id],
+      relationName: 'verifications',
+    }),
+    'admin-invitationsID': one(admin_invitations, {
+      fields: [payload_locked_documents_rels['admin-invitationsID']],
+      references: [admin_invitations.id],
+      relationName: 'admin-invitations',
+    }),
     pagesID: one(pages, {
       fields: [payload_locked_documents_rels.pagesID],
       references: [pages.id],
@@ -2537,11 +2713,6 @@ export const relations_payload_locked_documents_rels = relations(
       fields: [payload_locked_documents_rels.categoriesID],
       references: [categories.id],
       relationName: 'categories',
-    }),
-    usersID: one(users, {
-      fields: [payload_locked_documents_rels.usersID],
-      references: [users.id],
-      relationName: 'users',
     }),
     redirectsID: one(redirects, {
       fields: [payload_locked_documents_rels.redirectsID],
@@ -2665,6 +2836,11 @@ export const relations_footer = relations(footer, ({ many }) => ({
 }))
 
 type DatabaseSchema = {
+  users: typeof users
+  user_sessions: typeof user_sessions
+  user_accounts: typeof user_accounts
+  verifications: typeof verifications
+  admin_invitations: typeof admin_invitations
   pages_hero_links: typeof pages_hero_links
   pages_blocks_cta_links: typeof pages_blocks_cta_links
   pages_blocks_cta: typeof pages_blocks_cta
@@ -2694,8 +2870,6 @@ type DatabaseSchema = {
   media: typeof media
   categories_breadcrumbs: typeof categories_breadcrumbs
   categories: typeof categories
-  users_sessions: typeof users_sessions
-  users: typeof users
   redirects: typeof redirects
   redirects_rels: typeof redirects_rels
   forms_blocks_checkbox: typeof forms_blocks_checkbox
@@ -2728,6 +2902,11 @@ type DatabaseSchema = {
   footer_nav_items: typeof footer_nav_items
   footer: typeof footer
   footer_rels: typeof footer_rels
+  relations_users: typeof relations_users
+  relations_user_sessions: typeof relations_user_sessions
+  relations_user_accounts: typeof relations_user_accounts
+  relations_verifications: typeof relations_verifications
+  relations_admin_invitations: typeof relations_admin_invitations
   relations_pages_hero_links: typeof relations_pages_hero_links
   relations_pages_blocks_cta_links: typeof relations_pages_blocks_cta_links
   relations_pages_blocks_cta: typeof relations_pages_blocks_cta
@@ -2757,8 +2936,6 @@ type DatabaseSchema = {
   relations_media: typeof relations_media
   relations_categories_breadcrumbs: typeof relations_categories_breadcrumbs
   relations_categories: typeof relations_categories
-  relations_users_sessions: typeof relations_users_sessions
-  relations_users: typeof relations_users
   relations_redirects_rels: typeof relations_redirects_rels
   relations_redirects: typeof relations_redirects
   relations_forms_blocks_checkbox: typeof relations_forms_blocks_checkbox
