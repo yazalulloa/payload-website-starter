@@ -14,6 +14,7 @@ import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 
 import { Page, Post } from '@/payload-types'
 import { getServerSideURL } from '@/utilities/getURL'
+
 import { betterAuthPlugin } from 'payload-auth'
 import { nextCookies } from 'better-auth/next-js'
 import { admin, multiSession } from 'better-auth/plugins'
@@ -123,13 +124,13 @@ export const plugins: Plugin[] = [
       slug: 'verifications',
     },
     betterAuthOptions: {
-      appName: 'marketplace',
+      appName: 'website-starter',
+      secret: process.env.BETTER_AUTH_SECRET,
       baseURL: process.env.NEXT_PUBLIC_SERVER_URL,
       trustedOrigins: [process.env.NEXT_PUBLIC_SERVER_URL!],
       // emailAndPassword: {
-      //   enabled: true,
+      //   enabled: false,
       // },
-      secret: process.env.BETTER_AUTH_SECRET,
       socialProviders: {
         github: {
           clientId: process.env.GITHUB_CLIENT_ID as string,
