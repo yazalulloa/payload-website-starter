@@ -123,7 +123,7 @@ importers:
         specifier: 0.34.3
         version: 0.34.3
       simple-swizzle:
-        specifier: ^0.2.2
+        specifier: 0.2.2
         version: 0.2.2
       tailwind-merge:
         specifier: ^3.3.1
