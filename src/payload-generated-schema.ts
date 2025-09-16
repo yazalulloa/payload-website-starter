@@ -69,6 +69,9 @@ export const user_sessions = sqliteTable(
     impersonatedBy: integer('impersonated_by_id').references(() => users.id, {
       onDelete: 'set null',
     }),
+    activeOrganization: integer('active_organization_id').references(() => organizations.id, {
+      onDelete: 'set null',
+    }),
   },
   (columns) => ({
     user_sessions_token_idx: uniqueIndex('user_sessions_token_idx').on(columns.token),
@@ -77,6 +80,9 @@ export const user_sessions = sqliteTable(
     user_sessions_user_idx: index('user_sessions_user_idx').on(columns.user),
     user_sessions_impersonated_by_idx: index('user_sessions_impersonated_by_idx').on(
       columns.impersonatedBy,
+    ),
+    user_sessions_active_organization_idx: index('user_sessions_active_organization_idx').on(
+      columns.activeOrganization,
     ),
   }),
 )
@@ -145,6 +151,92 @@ export const verifications = sqliteTable(
     verifications_expires_at_idx: index('verifications_expires_at_idx').on(columns.expiresAt),
     verifications_created_at_idx: index('verifications_created_at_idx').on(columns.createdAt),
     verifications_updated_at_idx: index('verifications_updated_at_idx').on(columns.updatedAt),
+  }),
+)
+
+export const organizations = sqliteTable(
+  'organizations',
+  {
+    id: integer('id').primaryKey(),
+    name: text('name').notNull(),
+    slug: text('slug'),
+    logo: text('logo'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    metadata: text('metadata'),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (columns) => ({
+    organizations_slug_idx: uniqueIndex('organizations_slug_idx').on(columns.slug),
+    organizations_updated_at_idx: index('organizations_updated_at_idx').on(columns.updatedAt),
+  }),
+)
+
+export const members = sqliteTable(
+  'members',
+  {
+    id: integer('id').primaryKey(),
+    organization: integer('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'set null',
+      }),
+    user: integer('user_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'set null',
+      }),
+    role: text('role').notNull().default('member'),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (columns) => ({
+    members_organization_idx: index('members_organization_idx').on(columns.organization),
+    members_user_idx: index('members_user_idx').on(columns.user),
+    members_updated_at_idx: index('members_updated_at_idx').on(columns.updatedAt),
+  }),
+)
+
+export const invitations = sqliteTable(
+  'invitations',
+  {
+    id: integer('id').primaryKey(),
+    organization: integer('organization_id')
+      .notNull()
+      .references(() => organizations.id, {
+        onDelete: 'set null',
+      }),
+    email: text('email').notNull(),
+    role: text('role'),
+    status: text('status').notNull().default('pending'),
+    expiresAt: text('expires_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    inviter: integer('inviter_id')
+      .notNull()
+      .references(() => users.id, {
+        onDelete: 'set null',
+      }),
+    updatedAt: text('updated_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+    createdAt: text('created_at')
+      .notNull()
+      .default(sql`(strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))`),
+  },
+  (columns) => ({
+    invitations_organization_idx: index('invitations_organization_idx').on(columns.organization),
+    invitations_email_idx: index('invitations_email_idx').on(columns.email),
+    invitations_inviter_idx: index('invitations_inviter_idx').on(columns.inviter),
+    invitations_updated_at_idx: index('invitations_updated_at_idx').on(columns.updatedAt),
+    invitations_created_at_idx: index('invitations_created_at_idx').on(columns.createdAt),
   }),
 )
 
@@ -1695,6 +1787,9 @@ export const payload_locked_documents_rels = sqliteTable(
     userSessionsID: integer('user_sessions_id'),
     userAccountsID: integer('user_accounts_id'),
     verificationsID: integer('verifications_id'),
+    organizationsID: integer('organizations_id'),
+    membersID: integer('members_id'),
+    invitationsID: integer('invitations_id'),
     'admin-invitationsID': integer('admin_invitations_id'),
     pagesID: integer('pages_id'),
     postsID: integer('posts_id'),
@@ -1722,6 +1817,15 @@ export const payload_locked_documents_rels = sqliteTable(
     payload_locked_documents_rels_verifications_id_idx: index(
       'payload_locked_documents_rels_verifications_id_idx',
     ).on(columns.verificationsID),
+    payload_locked_documents_rels_organizations_id_idx: index(
+      'payload_locked_documents_rels_organizations_id_idx',
+    ).on(columns.organizationsID),
+    payload_locked_documents_rels_members_id_idx: index(
+      'payload_locked_documents_rels_members_id_idx',
+    ).on(columns.membersID),
+    payload_locked_documents_rels_invitations_id_idx: index(
+      'payload_locked_documents_rels_invitations_id_idx',
+    ).on(columns.invitationsID),
     payload_locked_documents_rels_admin_invitations_id_idx: index(
       'payload_locked_documents_rels_admin_invitations_id_idx',
     ).on(columns['admin-invitationsID']),
@@ -1776,6 +1880,21 @@ export const payload_locked_documents_rels = sqliteTable(
       columns: [columns['verificationsID']],
       foreignColumns: [verifications.id],
       name: 'payload_locked_documents_rels_verifications_fk',
+    }).onDelete('cascade'),
+    organizationsIdFk: foreignKey({
+      columns: [columns['organizationsID']],
+      foreignColumns: [organizations.id],
+      name: 'payload_locked_documents_rels_organizations_fk',
+    }).onDelete('cascade'),
+    membersIdFk: foreignKey({
+      columns: [columns['membersID']],
+      foreignColumns: [members.id],
+      name: 'payload_locked_documents_rels_members_fk',
+    }).onDelete('cascade'),
+    invitationsIdFk: foreignKey({
+      columns: [columns['invitationsID']],
+      foreignColumns: [invitations.id],
+      name: 'payload_locked_documents_rels_invitations_fk',
     }).onDelete('cascade'),
     'admin-invitationsIdFk': foreignKey({
       columns: [columns['admin-invitationsID']],
@@ -2042,6 +2161,11 @@ export const relations_user_sessions = relations(user_sessions, ({ one }) => ({
     references: [users.id],
     relationName: 'impersonatedBy',
   }),
+  activeOrganization: one(organizations, {
+    fields: [user_sessions.activeOrganization],
+    references: [organizations.id],
+    relationName: 'activeOrganization',
+  }),
 }))
 export const relations_user_accounts = relations(user_accounts, ({ one }) => ({
   user: one(users, {
@@ -2051,6 +2175,31 @@ export const relations_user_accounts = relations(user_accounts, ({ one }) => ({
   }),
 }))
 export const relations_verifications = relations(verifications, () => ({}))
+export const relations_organizations = relations(organizations, () => ({}))
+export const relations_members = relations(members, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [members.organization],
+    references: [organizations.id],
+    relationName: 'organization',
+  }),
+  user: one(users, {
+    fields: [members.user],
+    references: [users.id],
+    relationName: 'user',
+  }),
+}))
+export const relations_invitations = relations(invitations, ({ one }) => ({
+  organization: one(organizations, {
+    fields: [invitations.organization],
+    references: [organizations.id],
+    relationName: 'organization',
+  }),
+  inviter: one(users, {
+    fields: [invitations.inviter],
+    references: [users.id],
+    relationName: 'inviter',
+  }),
+}))
 export const relations_admin_invitations = relations(admin_invitations, () => ({}))
 export const relations_pages_hero_links = relations(pages_hero_links, ({ one }) => ({
   _parentID: one(pages, {
@@ -2689,6 +2838,21 @@ export const relations_payload_locked_documents_rels = relations(
       references: [verifications.id],
       relationName: 'verifications',
     }),
+    organizationsID: one(organizations, {
+      fields: [payload_locked_documents_rels.organizationsID],
+      references: [organizations.id],
+      relationName: 'organizations',
+    }),
+    membersID: one(members, {
+      fields: [payload_locked_documents_rels.membersID],
+      references: [members.id],
+      relationName: 'members',
+    }),
+    invitationsID: one(invitations, {
+      fields: [payload_locked_documents_rels.invitationsID],
+      references: [invitations.id],
+      relationName: 'invitations',
+    }),
     'admin-invitationsID': one(admin_invitations, {
       fields: [payload_locked_documents_rels['admin-invitationsID']],
       references: [admin_invitations.id],
@@ -2840,6 +3004,9 @@ type DatabaseSchema = {
   user_sessions: typeof user_sessions
   user_accounts: typeof user_accounts
   verifications: typeof verifications
+  organizations: typeof organizations
+  members: typeof members
+  invitations: typeof invitations
   admin_invitations: typeof admin_invitations
   pages_hero_links: typeof pages_hero_links
   pages_blocks_cta_links: typeof pages_blocks_cta_links
@@ -2906,6 +3073,9 @@ type DatabaseSchema = {
   relations_user_sessions: typeof relations_user_sessions
   relations_user_accounts: typeof relations_user_accounts
   relations_verifications: typeof relations_verifications
+  relations_organizations: typeof relations_organizations
+  relations_members: typeof relations_members
+  relations_invitations: typeof relations_invitations
   relations_admin_invitations: typeof relations_admin_invitations
   relations_pages_hero_links: typeof relations_pages_hero_links
   relations_pages_blocks_cta_links: typeof relations_pages_blocks_cta_links

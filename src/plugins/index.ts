@@ -4,6 +4,7 @@ import { nestedDocsPlugin } from '@payloadcms/plugin-nested-docs'
 import { redirectsPlugin } from '@payloadcms/plugin-redirects'
 import { seoPlugin } from '@payloadcms/plugin-seo'
 import { searchPlugin } from '@payloadcms/plugin-search'
+import { multiTenantPlugin } from '@payloadcms/plugin-multi-tenant'
 import { Plugin } from 'payload'
 import { revalidateRedirects } from '@/hooks/revalidateRedirects'
 import { GenerateTitle, GenerateURL } from '@payloadcms/plugin-seo/types'
@@ -17,7 +18,7 @@ import { getServerSideURL } from '@/utilities/getURL'
 
 import { betterAuthPlugin } from 'payload-auth'
 import { nextCookies } from 'better-auth/next-js'
-import { admin, multiSession } from 'better-auth/plugins'
+import { admin, multiSession, organization } from 'better-auth/plugins'
 
 const generateTitle: GenerateTitle<Post | Page> = ({ doc }) => {
   return doc?.title ? `${doc.title} | Payload Website Template` : 'Payload Website Template'
@@ -162,7 +163,7 @@ export const plugins: Plugin[] = [
           // trustedProviders: ['google'],
         },
       },
-      plugins: [admin(), multiSession(), nextCookies()],
+      plugins: [admin(), multiSession(), nextCookies(), organization()],
     },
   }),
 ]

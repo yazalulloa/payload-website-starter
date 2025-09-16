@@ -71,6 +71,9 @@ export interface Config {
     userSessions: UserSession;
     userAccounts: UserAccount;
     verifications: Verification;
+    organizations: Organization;
+    members: Member;
+    invitations: Invitation;
     'admin-invitations': AdminInvitation;
     pages: Page;
     posts: Post;
@@ -91,6 +94,9 @@ export interface Config {
     userSessions: UserSessionsSelect<false> | UserSessionsSelect<true>;
     userAccounts: UserAccountsSelect<false> | UserAccountsSelect<true>;
     verifications: VerificationsSelect<false> | VerificationsSelect<true>;
+    organizations: OrganizationsSelect<false> | OrganizationsSelect<true>;
+    members: MembersSelect<false> | MembersSelect<true>;
+    invitations: InvitationsSelect<false> | InvitationsSelect<true>;
     'admin-invitations': AdminInvitationsSelect<false> | AdminInvitationsSelect<true>;
     pages: PagesSelect<false> | PagesSelect<true>;
     posts: PostsSelect<false> | PostsSelect<true>;
@@ -224,6 +230,37 @@ export interface UserSession {
    * The admin who is impersonating this session
    */
   impersonatedBy?: (number | null) | User;
+  /**
+   * The currently active organization for the session
+   */
+  activeOrganization?: (number | null) | Organization;
+}
+/**
+ * Organizations are groups of users that share access to certain resources.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organizations".
+ */
+export interface Organization {
+  id: number;
+  /**
+   * The name of the organization.
+   */
+  name: string;
+  /**
+   * The slug of the organization.
+   */
+  slug?: string | null;
+  /**
+   * The logo of the organization.
+   */
+  logo?: string | null;
+  createdAt: string;
+  /**
+   * Additional metadata for the organization.
+   */
+  metadata?: string | null;
+  updatedAt: string;
 }
 /**
  * Accounts are used to store user accounts for authentication providers
@@ -298,6 +335,64 @@ export interface Verification {
   expiresAt: string;
   createdAt: string;
   updatedAt: string;
+}
+/**
+ * Members of an organization.
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members".
+ */
+export interface Member {
+  id: number;
+  /**
+   * The organization that the member belongs to.
+   */
+  organization: number | Organization;
+  /**
+   * The user that is a member of the organization.
+   */
+  user: number | User;
+  /**
+   * The role of the member in the organization.
+   */
+  role: string;
+  createdAt: string;
+  updatedAt: string;
+}
+/**
+ * Invitations to join an organization
+ *
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "invitations".
+ */
+export interface Invitation {
+  id: number;
+  /**
+   * The organization that the user is being invited to.
+   */
+  organization: number | Organization;
+  /**
+   * The email of the user being invited.
+   */
+  email: string;
+  /**
+   * The role of the user being invited.
+   */
+  role?: string | null;
+  /**
+   * The status of the invitation.
+   */
+  status: string;
+  /**
+   * The date and time when the invitation will expire.
+   */
+  expiresAt: string;
+  /**
+   * The user who invited the user.
+   */
+  inviter: number | User;
+  updatedAt: string;
+  createdAt: string;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1069,6 +1164,18 @@ export interface PayloadLockedDocument {
         value: number | Verification;
       } | null)
     | ({
+        relationTo: 'organizations';
+        value: number | Organization;
+      } | null)
+    | ({
+        relationTo: 'members';
+        value: number | Member;
+      } | null)
+    | ({
+        relationTo: 'invitations';
+        value: number | Invitation;
+      } | null)
+    | ({
         relationTo: 'admin-invitations';
         value: number | AdminInvitation;
       } | null)
@@ -1179,6 +1286,7 @@ export interface UserSessionsSelect<T extends boolean = true> {
   userAgent?: T;
   user?: T;
   impersonatedBy?: T;
+  activeOrganization?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
@@ -1208,6 +1316,43 @@ export interface VerificationsSelect<T extends boolean = true> {
   expiresAt?: T;
   createdAt?: T;
   updatedAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "organizations_select".
+ */
+export interface OrganizationsSelect<T extends boolean = true> {
+  name?: T;
+  slug?: T;
+  logo?: T;
+  createdAt?: T;
+  metadata?: T;
+  updatedAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "members_select".
+ */
+export interface MembersSelect<T extends boolean = true> {
+  organization?: T;
+  user?: T;
+  role?: T;
+  createdAt?: T;
+  updatedAt?: T;
+}
+/**
+ * This interface was referenced by `Config`'s JSON-Schema
+ * via the `definition` "invitations_select".
+ */
+export interface InvitationsSelect<T extends boolean = true> {
+  organization?: T;
+  email?: T;
+  role?: T;
+  status?: T;
+  expiresAt?: T;
+  inviter?: T;
+  updatedAt?: T;
+  createdAt?: T;
 }
 /**
  * This interface was referenced by `Config`'s JSON-Schema
